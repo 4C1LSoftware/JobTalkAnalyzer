@@ -1,4 +1,10 @@
 env
 /transcriptions
+/analysis
 *.ipynb
 /content
+/84_21
+/88_22
+__pycache__
+/output
+data.csv
