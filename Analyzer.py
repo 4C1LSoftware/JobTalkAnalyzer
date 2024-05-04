@@ -6,6 +6,8 @@ from ContentAnalysis import OpenAIIntegration
 import config
 import json
 
+
+
 class Analyzer:
     def __init__(self, path: str, pid: int, openapi_key):
         self.path = path
@@ -59,24 +61,27 @@ class Analyzer:
         7- Enjoys Problem Solving
         """
 
-        content_analysis= {}
+        content_analysis_dict= {}
         for filename in self.wav_files:
             openai_integration = OpenAIIntegration(self.openapi_key)
-
+            file_path= os.path.join(self.path, filename)
             # Transcribe the audio file
-            transcription = openai_integration.transcribe_audio(filename)
+            transcription = openai_integration.transcribe_audio(file_path)
             response = openai_integration.get_chat_response(transcription, topics, question)
-            content_analysis[filename]= response
+            content_analysis_dict[filename]= response
 
         path = os.path.join("analysis", self.pid)
+        os.makedirs(path, exist_ok=True)
+
+        file_path= os.path.join(path, "content_analysis.json")
 
         # Write the dictionary to a file in JSON format
-        with open(path, 'w') as file:
-            json.dump(content_analysis, file, indent=4)
+        with open(file_path, 'w') as file:
+            json.dump(content_analysis_dict, file, indent=4)
         
 # Example usage
 analyzer = Analyzer('content', "1", config.OPENAI_API_KEY)
+#analyzer.content_analysis()
 analyzer.combine_wav_files()
 analyzer.combine_mp4_files()
-analyzer.content_analysis()
 analyzer.performance_analysis()

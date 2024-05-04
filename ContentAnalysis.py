@@ -8,23 +8,49 @@
 !pip install openai
 
 '''
+import whisperx
 import os
 import csv
 import openai
 from openai import OpenAI
 import json
 import time
-import whisper
 
+def extract_and_convert_json(s):
+    # Find the leftmost opening curly brace
+    start_index = s.find('{')
+    # Find the rightmost closing curly brace
+    end_index = s.rfind('}')
+
+    # Check if both curly braces are found
+    if start_index == -1 or end_index == -1:
+        print("No valid JSON format found.")
+        return None
+
+    # Extract the substring that is presumed to be JSON
+    json_string = s[start_index:end_index + 1]
+
+    try:
+        # Convert the JSON string to a Python dictionary
+        json_data = json.loads(json_string)
+        return json_data
+    except json.JSONDecodeError as e:
+        print("Error decoding JSON:", e)
+        return None
 class OpenAIIntegration:
     def __init__(self, key):
         self.key= key
         self.client = OpenAI(api_key=key)
-        self.model = whisper.load_model("large-v3")
+
+        self.device = "cuda"
+        self.batch_size = 16  # Adjust based on your GPU memory
+        self.compute_type = "float16"  # Use "int8" for lower memory usage, with potential accuracy trade-off
+        self.model = whisperx.load_model("large-v2", self.device, compute_type=self.compute_type)
 
     def transcribe_audio(self, audio_path):
-        result = self.model.transcribe(audio_path)
-        return result['text']
+        audio = whisperx.load_audio(self.audio_path)
+        transcription_result = self.model.transcribe(audio, batch_size=self.batch_size)
+        return transcription_result
 
     def get_chat_response(self, transcribed_text, topics, question, role="user"):
         system_message = "You are a job interview anaysis bot."
@@ -64,7 +90,7 @@ class OpenAIIntegration:
         )
 
         # Return the response content
-        return completion.choices[0].message.content
+        return extract_and_convert_json(completion.choices[0].message.content)
 
 
 
