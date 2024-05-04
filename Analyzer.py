@@ -78,5 +78,5 @@ class Analyzer:
 analyzer = Analyzer('content', "1", config.OPENAI_API_KEY)
 analyzer.combine_wav_files()
 analyzer.combine_mp4_files()
-analyzer.performance_analysis()
 analyzer.content_analysis()
+analyzer.performance_analysis()
