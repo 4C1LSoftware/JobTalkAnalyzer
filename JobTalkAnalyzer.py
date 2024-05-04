@@ -638,14 +638,23 @@ class JobTalkAnalyzer:
         normalize_feature(feature_file, stats_file_path, output_file)
 
     def predict_scores(self):
-      # Example usage:
-      json_path = self.data_directory + "/normalized_features.json"
-      model_directory = 'Oelp'
-      results = load_and_predict(model_directory, json_path)
+        json_path = self.data_directory + "/normalized_features.json"
+        model_directory = 'Oelp'
+        results = load_and_predict(model_directory, json_path)
 
-      for attr, predictions in results.items():
-          print(f"Predictions for {attr}:")
-          print(predictions[0])
+        # Prepare a dictionary to hold the data in a structured format
+        data_to_save = {}
+
+        for attr, predictions in results.items():
+            # Store the results in the dictionary instead of printing
+            data_to_save[attr] = predictions[0]
+
+        # Define the path for the JSON output file
+        output_json_path = self.data_directory + "/performance_analysis.json"
+        
+        # Write the results to a JSON file
+        with open(output_json_path, 'w') as json_file:
+            json.dump(data_to_save, json_file, indent=4)
 
     def average_facial_features(self):
         output_file = self.data_directory + "/averaged_facial_features.csv"
@@ -681,7 +690,7 @@ class JobTalkAnalyzer:
 
 
 
-
-analyzer= JobTalkAnalyzer("bad", "bad.wav","bad.mp4")
-analyzer.analyze()
-analyzer.predict_scores()
+if __name__ == "__main__":
+    analyzer= JobTalkAnalyzer("bad", "bad.wav","bad.mp4")
+    analyzer.analyze()
+    analyzer.predict_scores()
