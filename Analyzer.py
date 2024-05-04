@@ -1,16 +1,19 @@
 import os
 from pydub import AudioSegment
 from moviepy.editor import concatenate_videoclips, VideoFileClip
-import re
 from JobTalkAnalyzer import JobTalkAnalyzer
+from ContentAnalysis import OpenAIIntegration
+import config
+import json
 
 class Analyzer:
-    def __init__(self, path: str, pid: int):
+    def __init__(self, path: str, pid: int, openapi_key):
         self.path = path
         self.wav_files = []
         self.mp4_files = []
         self._validate_files()
         self.pid= pid
+        self.openapi_key= openapi_key
 
     def _validate_files(self):
         # List all files in the directory
@@ -42,9 +45,38 @@ class Analyzer:
         analyzer= JobTalkAnalyzer(self.pid, audio_path, video_path)
         analyzer.analyze()
         analyzer.predict_scores()
+        
+    def content_analysis(self):
+        question = "Tell me about yourself"
 
+        topics = """
+        1- Personal background
+        2- Educational background
+        3- Why they are interested in the job/industry
+        4- Curious
+        5- Clothing
+        6- Interested in sports
+        7- Enjoys Problem Solving
+        """
 
+        content_analysis= {}
+        for filename in self.wav_files:
+            openai_integration = OpenAIIntegration(self.openapi_key)
+
+            # Transcribe the audio file
+            transcription = openai_integration.transcribe_audio(filename)
+            response = openai_integration.get_chat_response(transcription, topics, question)
+            content_analysis[filename]= response
+
+        path = os.path.join("analysis", self.pid)
+
+        # Write the dictionary to a file in JSON format
+        with open(path, 'w') as file:
+            json.dump(content_analysis, file, indent=4)
+        
 # Example usage
-analyzer = Analyzer('content')
+analyzer = Analyzer('content', "1", config.OPENAI_API_KEY)
 analyzer.combine_wav_files()
 analyzer.combine_mp4_files()
+analyzer.performance_analysis()
+analyzer.content_analysis()

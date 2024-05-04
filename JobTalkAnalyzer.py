@@ -572,7 +572,7 @@ class JobTalkAnalyzer:
         self.transcription_model = whisperx.load_model("large-v2", self.device, compute_type=self.compute_type)
         self.participant_id = participant_id
         self.audio_path = audio_path
-        self.data_directory = os.path.join("transcriptions", self.participant_id)
+        self.data_directory = os.path.join("analysis", self.participant_id)
         self.audio = whisperx.load_audio(self.audio_path)
         self.video_path = video_path
 

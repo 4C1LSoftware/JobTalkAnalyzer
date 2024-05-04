@@ -1,0 +1,96 @@
+'''
+!pip install git+https://github.com/openai/whisper.git
+
+!sudo apt update && !sudo apt install ffmpeg -y
+
+!ffmpeg -version
+
+!pip install openai
+
+'''
+import os
+import csv
+import openai
+from openai import OpenAI
+import json
+import time
+import whisper
+
+class OpenAIIntegration:
+    def __init__(self, key):
+        self.key= key
+        self.client = OpenAI(api_key=key)
+        self.model = whisper.load_model("large-v3")
+
+    def transcribe_audio(self, audio_path):
+        result = self.model.transcribe(audio_path)
+        return result['text']
+
+    def get_chat_response(self, transcribed_text, topics, question, role="user"):
+        system_message = "You are a job interview anaysis bot."
+
+        prompt = f"""
+        System Instructions:
+        - Analyze the transcribed interview response below.
+        - Evaluate the response against predefined topics.
+        - For each topic, assign a score based on the completeness of the answer:
+        - 0: Not answered
+        - 1: Partially answered
+        - 2: Fully answered
+
+        Output the results in JSON format with two key components:
+        1. "topic_points": a dictionary with each topic and its corresponding score
+        2. "summary": a brief summary of the overall response
+
+        1. Here is the interview question posed to the candidate: {question}
+        2. Below is the interviewee's response:
+
+        Transcribed Interview Response:
+        {transcribed_text}
+
+        Assessment Criteria:
+        Here are the topics that should be answered by the interviewee:
+        {topics}
+        """
+
+        # specified model and messages
+        completion = self.client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": system_message},
+                {"role": role, "content": prompt}
+            ],
+            temperature = 0.2, #deterministic
+        )
+
+        # Return the response content
+        return completion.choices[0].message.content
+
+
+
+if __name__ == "main":
+    # Configuration and file paths
+    directory_path = "/content/transcription.txt"
+    audio_file = "/content/P1.wav"
+
+    openai_integration = OpenAIIntegration()
+
+    # Transcribe the audio file
+    transcription = openai_integration.transcribe_audio(audio_file)
+
+    # Example JSON for topics (replace with actual JSON input as required)
+    question = "Tell me about yourself"
+
+    topics = """
+    1- Personal background
+    2- Educational background
+    3- Why they are interested in the job/industry
+    4- Curious
+    5- Clothing
+    6- Interested in sports
+    7- Enjoys Problem Solving
+    """
+
+    # Get response from GPT-4 based on the transcription and topics
+    response = openai_integration.get_chat_response(transcription, topics, question)
+    print(response)
