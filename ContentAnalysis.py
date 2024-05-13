@@ -15,8 +15,12 @@ import openai
 from openai import OpenAI
 import json
 import time
+import copy
+import gc
+import torch
 
-def extract_and_convert_json(s):
+
+def extract_and_convert_json(s, doc_id):
     # Find the leftmost opening curly brace
     start_index = s.find('{')
     # Find the rightmost closing curly brace
@@ -30,10 +34,36 @@ def extract_and_convert_json(s):
     # Extract the substring that is presumed to be JSON
     json_string = s[start_index:end_index + 1]
 
+    def add_normalized_content_score(json_data):
+        # Convert the JSON string to a Python dictionary
+        # Check if 'topic_points' is present and is a dictionary
+        if 'topic_points' in json_data and isinstance(json_data['topic_points'], dict):
+            # Transform topic_points to the new list format
+            topic_points_list = [{'keyword': k, 'score': v} for k, v in json_data['topic_points'].items()]
+            json_data['topic_points'] = topic_points_list
+
+            # Calculate the sum of the values in 'topic_points'
+            total_score = sum(item['score'] for item in topic_points_list)
+            # Calculate the number of items in 'topic_points'
+            num_elements = len(topic_points_list)
+            # Normalize the score by the number of elements (calculate average)
+            if num_elements > 0:
+                normalized_score = total_score / (num_elements * 2)
+            else:
+                normalized_score = 0  # Avoid division by zero
+            # Add the normalized score to the dictionary
+            json_data['content_score'] = normalized_score
+        else:
+            print("No 'topic_points' found or it is not a dictionary.")
+    
+        # Return the modified dictionary
+        return json_data
+
     try:
         # Convert the JSON string to a Python dictionary
         json_data = json.loads(json_string)
-        return json_data
+        json_data['id'] = doc_id  # Add ID field
+        return add_normalized_content_score(json_data)
     except json.JSONDecodeError as e:
         print("Error decoding JSON:", e)
         return None
@@ -45,14 +75,22 @@ class OpenAIIntegration:
         self.device = "cuda"
         self.batch_size = 16  # Adjust based on your GPU memory
         self.compute_type = "float16"  # Use "int8" for lower memory usage, with potential accuracy trade-off
-        self.model = whisperx.load_model("large-v2", self.device, compute_type=self.compute_type)
-
+        
     def transcribe_audio(self, audio_path):
-        audio = whisperx.load_audio(self.audio_path)
-        transcription_result = self.model.transcribe(audio, batch_size=self.batch_size)
-        return transcription_result
+        model = whisperx.load_model("large-v2", self.device, compute_type=self.compute_type)
 
-    def get_chat_response(self, transcribed_text, topics, question, role="user"):
+        audio = whisperx.load_audio(audio_path)
+        transcription_result = model.transcribe(audio, batch_size=self.batch_size)
+        transcription_copy= copy.deepcopy(transcription_result["segments"])
+
+        align_model, metadata = whisperx.load_align_model(language_code=transcription_result["language"], device=self.device)
+
+        aligned_result = whisperx.align(transcription_result["segments"], align_model, metadata, audio, self.device, return_char_alignments=False)
+
+        gc.collect(); torch.cuda.empty_cache(); del model
+        return transcription_copy, aligned_result["word_segments"]
+
+    def get_chat_response(self, transcribed_text, topics, question,  question_id, role="user"):
         system_message = "You are a job interview anaysis bot."
 
         prompt = f"""
@@ -90,7 +128,7 @@ class OpenAIIntegration:
         )
 
         # Return the response content
-        return extract_and_convert_json(completion.choices[0].message.content)
+        return extract_and_convert_json(completion.choices[0].message.content, question_id)
 
 
 
@@ -113,7 +151,7 @@ if __name__ == "main":
     3- Why they are interested in the job/industry
     4- Curious
     5- Clothing
-    6- Interested in sports
+    6- Enjoys teamwork
     7- Enjoys Problem Solving
     """
 
