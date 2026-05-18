@@ -36,15 +36,15 @@ The pipeline is split into two independent tracks that are merged at the end.
 
 Evaluates how the candidate delivered their response across three feature groups:
 
-**Prosody** — extracted from the raw audio using Praat (low-level) and WhisperX word timestamps (mid-level):
+**Prosody** — extracted from the raw audio using [Praat](https://www.fon.hum.uva.nl/praat/) (low-level) and [WhisperX](https://github.com/m-bain/whisperX) word timestamps (mid-level):
 - Low-level: formants (F1–F4), pitch (meanF0, stdevF0), jitter, shimmer, harmonics-to-noise ratio, spectral energy, intensity
-- Mid-level: articulation rate, speech chunk lengths, silence durations, filled pause frequency (uh, um — detected via WebRTC VAD), linguistic complexity
+- Mid-level: articulation rate, speech chunk lengths, silence durations, filled pause frequency (uh, um — detected via [WebRTC VAD](https://github.com/wiseman/py-webrtcvad)), linguistic complexity
 
 **Lexical** — a word histogram over LIWC 2007 categories computed from the transcript: pronouns (I/we/they), speech disfluencies, emotions (positive/negative/anxiety/anger/sadness), cognitive and perceptual words, work-related words, grammar (articles, verbs, conjunctions, etc.)
 
-**Facial** — per-frame emotion probabilities (angry, disgust, fear, happy, neutral) extracted using FER with MTCNN face detection, averaged across all frames.
+**Facial** — per-frame emotion probabilities (angry, disgust, fear, happy, neutral) extracted using [FER](https://github.com/justinshenk/fer) with [MTCNN](https://github.com/timesler/facenet-pytorch) face detection, averaged across all frames.
 
-All three feature vectors are concatenated, normalized (mean 0, stdev 1), and fed into **18 SVR models** trained on the MIT job interview dataset — one model per scoring category:
+All three feature vectors are concatenated, normalized (mean 0, stdev 1), and fed into **18 SVR models** trained on the MIT job interview dataset — one model per scoring category. The dataset contains recorded mock interviews scored by human raters across 18 dimensions of interview performance.
 
 | Category | Correlation | AUC |
 |---|---|---|
@@ -62,7 +62,7 @@ Plus: Overall, EyeContact, NoFillers, NotStressed, Focused, Authentic, NotAwkwar
 
 ### Content Analysis
 
-The transcript is passed to **GPT-4** along with the interview question and a recruiter-defined topic list. The LLM scores each topic:
+The transcript is passed to **[GPT-4](https://openai.com/gpt-4)** along with the interview question and a recruiter-defined topic list. The LLM scores each topic:
 - `0` — not addressed
 - `1` — partially addressed
 - `2` — fully addressed
@@ -96,4 +96,4 @@ analysis/{candidate_id}/{interview_id}/{participant_id}/
 
 - CUDA GPU (models run with `float16` compute)
 - Python dependencies: see `requirements.txt`
-- Key libraries: WhisperX, FER, parselmouth (Praat), webrtcvad, librosa, scikit-learn, OpenAI
+- Key libraries: [WhisperX](https://github.com/m-bain/whisperX), [FER](https://github.com/justinshenk/fer), [parselmouth (Praat)](https://parselmouth.readthedocs.io), [webrtcvad](https://github.com/wiseman/py-webrtcvad), librosa, scikit-learn, OpenAI
