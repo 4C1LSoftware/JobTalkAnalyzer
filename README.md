@@ -28,6 +28,18 @@ flowchart TD
     CS --> R
 ```
 
+## Platform
+
+JobTalk Analyzer is the AI component of **[JobTalk](https://github.com/4C1LSoftware)**, a recruitment platform that streamlines hiring by automating candidate evaluation. It eliminates human bias by assessing candidates purely through ML-based analysis of their interview recordings.
+
+Key platform features:
+- **Interview management** — recruiters create interview guides with custom questions and topic checklists tailored to each job profile
+- **Asynchronous interviews** — candidates receive an invitation, record video responses to each question on their own time, and submit when done
+- **Automated analysis** — once submitted, the platform scores both the content of answers and the candidate's delivery, producing a detailed report
+- **Recruiter dashboard** — recruiters review per-candidate reports covering all 18 performance dimensions alongside per-question content scores
+
+The platform uses a **PostgreSQL** database to store companies, recruiters, candidates, jobs, interview guides (questions + topic checklists), and the resulting analysis reports. The analyzer reads pending interviews from the database, processes them, and writes the results back once complete.
+
 ## Analysis Pipeline
 
 The pipeline is split into two independent tracks that are merged at the end.
@@ -44,7 +56,11 @@ Evaluates how the candidate delivered their response across three feature groups
 
 **Facial** — per-frame emotion probabilities (angry, disgust, fear, happy, neutral) extracted using [FER](https://github.com/justinshenk/fer) with [MTCNN](https://github.com/timesler/facenet-pytorch) face detection, averaged across all frames.
 
-All three feature vectors are concatenated, normalized (mean 0, stdev 1), and fed into **18 SVR models** trained on the MIT job interview dataset — one model per scoring category. The dataset contains recorded mock interviews scored by human raters across 18 dimensions of interview performance.
+All three feature vectors are concatenated, normalized (mean 0, stdev 1), and fed into **18 SVR models** — one per scoring category.
+
+**Dataset** — Models were trained on the MIT job interview dataset, which contains recorded mock interviews scored by human raters across 18 performance dimensions.
+
+**Evaluation** — To avoid bias from any single train/test split, models were evaluated over **1000 random 80/20 splits** of the dataset. The reported correlation and AUC scores are the mean across all 1000 splits, giving a robust estimate of generalization performance.
 
 | Category | Correlation | AUC |
 |---|---|---|
